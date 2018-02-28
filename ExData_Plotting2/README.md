@@ -40,9 +40,24 @@ Columns:
 - year: year:  year recorded
 
 
-## Source_ClassificatintCode.rds
+## Source_ClassificationCode.rds
 
 Columns:
+- SCC                 
+- Data.Category       
+- Short.Name         
+- EI.Sector           
+- Option.Group
+- Option.Set
+- SCC.Level.One
+- SCC.Level.Two       
+- SCC.Level.Three    
+- SCC.Level.Four      
+- Map.To              
+- Last.Inventory.Year
+- Created_Date        
+- Revised_Date        
+- Usage.Notes  
 
 # Assignment
 
