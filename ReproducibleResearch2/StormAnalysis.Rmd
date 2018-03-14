@@ -1,0 +1,236 @@
+---
+title: "Coursera, Reproducible Research: Peer Assessment 2: Storm Data"
+author: Heather Dye
+output: 
+  html_document:
+    theme: cosmo
+    keep_md: true
+    highlight: tango
+---
+
+# Assignment
+In this analysis NOAA Storm Database is used to assess:
+
+1. Across the United States, which types of events (as indicated in the 𝙴𝚅𝚃𝚈𝙿𝙴 variable) are most harmful with respect to population health?
+
+2. Across the United States, which types of events have the greatest economic consequences?
+
+Presentation is limited to 3 plots.
+
+# Synopsis
+This report explores U.S. National Oceanic and Atmospheric Administration's (NOAA) storm database (1950-2011). Top 10 events having the most harmful effects on human population in terms of injuries and fatalities were identified.  Also top 10 events associated with highest economic damage were identified.  The data is presented using bar charts.  Additionally,  states experiencing the most amount of distress are presented in table format.
+
+It was determined that tornado is the most significant weather event in terms of impact on population. It is associated with 5,633 deaths and 91,346 injuries.  Flood is the most damaging event causing \$150 billion in property and crop damage in that time frame.  In terms of impact on particular states, heat in IL is associated with most amount of deaths, 653.  Tornado in TX is associated with the most amount of injuries, 8207 and flood in CA caused \$117 billion in economic damage.
+
+
+# Data Processing
+
+## Get the file and set working directory
+1. The data can be downloaded from [Storm Data](https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2).  For this analysis, it was downloded by clicking on the link and moved into working directory.
+
+[Storm data documentation](https://d396qusza40orc.cloudfront.net/repdata%2Fpeer2_doc%2Fpd01016005curr.pdf) is avialable here.
+
+2. Set your local working directory, the following code is an example of mine.
+```{r}
+setwd("~/Desktop/RRef/DataScienceCoursera/ReproducibleResearch2")
+```
+
+
+## Loading and preprocessing the data
+
+1. Read data file
+```{r read, cache = T}
+data <- read.csv("repdata-data-StormData.csv.bz2", header = TRUE, sep = ",")
+
+```
+
+
+2. View the data and reduce data to columns of interest
+```{r reduce, cache = T}
+storm.data <- data[, c('STATE','EVTYPE', 'FATALITIES', 'INJURIES', 'PROPDMG', 'PROPDMGEXP', 'CROPDMG', 'CROPDMGEXP')]
+str(storm.data)
+
+```
+Data Description:
+
+ - State:      abreviation of state  
+ - EVTYPE:     event type, like tornado, heat, flash flood
+ - FATALITIES: number of fatalities
+ - INGURIES:   number of injuries
+ - PROPDMG:    value (magnitude) of property damage
+ - PROPDMGEXP: units for PROPDMG: -1:8 = 10^(-1:8), h | H = 10^2, K = 10^3, m | M = 10^4, B = 10^5
+ - CROPDMG:    value (magnitude) of property damage
+ - CROPDMGEXP: units for CROPDMG: : -1:8 = 10^(-1:8), h | H = 10^2, K = 10^3, m | M = 10^6, B = 10^9
+
+3. Modify damage data to uniform values, simplify data to columns used in presentation.
+
+- identify levels
+```{r}
+cat("Property damage factors = ", levels(storm.data$PROPDMGEXP), "\n" )
+cat("Crop damage factors = ", levels(storm.data$CROPDMGEXP), "\n" )
+
+```
+
+- for consistancy, make all damage factors upper case 
+```{r}
+storm.data$PROPDMGEXP <- toupper(storm.data$PROPDMGEXP)
+storm.data$CROPDMGEXP <- toupper(storm.data$CROPDMGEXP)
+```
+
+- create function to assign values to factors
+```{r echo = FALSE, include = FALSE}
+if ( !is.element('car', installed.packages()[,1])  ) install.packages("car")
+ require("car") 
+```
+
+```{r unit.function}
+## note, dplyr interfares with car version of recode.
+
+unit <- function(x) {
+    recode(x,
+        " 
+          '-' = 10^(-1);
+          '+' = 10^(0);
+          '?' = 10^(0);
+          '0' = 10^0;
+          '1' = 10^1;
+          '2' = 10^2;
+          '3' = 10^3;
+          '4' = 10^4;
+          '5' = 10^5;
+          '6' = 10^6;
+          '7' = 10^7;
+          '8' = 10^8;
+          'H' = 10^2;
+          'K' = 10^3;
+          'M' = 10^6;
+          'B' = 10^9  ")
+}
+
+```
+
+- assign unit conversion function to data.frame and calculate property and crop damage values
+```{r calculate.damage}
+## apply unit function
+storm.data$PROPDMG.VALUE <- unit(storm.data$PROPDMGEXP)
+storm.data$CROPDMG.VALUE <- unit(storm.data$CROPDMGEXP)
+
+## convert to numeric
+storm.data$PROPDMG.VALUE <- as.numeric(storm.data$PROPDMG.VALUE)
+storm.data$CROPDMG.VALUE <- as.numeric(storm.data$CROPDMG.VALUE)
+
+## calculate damage value and remove NA
+storm.data$PROPDMG.VALUE <- storm.data$PROPDMG.VALUE * storm.data$PROPDMG
+storm.data$PROPDMG.VALUE <- ifelse(is.na(storm.data$PROPDMG.VALUE), 0, storm.data$PROPDMG.VALUE)
+
+storm.data$CROPDMG.VALUE <- storm.data$CROPDMG.VALUE * storm.data$CROPDMG
+storm.data$CROPDMG.VALUE <- ifelse(is.na(storm.data$CROPDMG.VALUE), 0, storm.data$CROPDMG.VALUE)
+
+## total damage
+storm.data$TOTAL.VALUE <- storm.data$PROPDMG.VALUE + storm.data$CROPDMG.VALUE
+```
+
+- select used columns only
+```{r echo = FALSE, include = FALSE}
+if ( !is.element('dplyr', installed.packages()[,1])  ) install.packages("dplyr")
+require("dplyr") 
+```
+
+
+```{r select.columns}
+
+storm.data <- select(storm.data, STATE, EVTYPE, FATALITIES, INJURIES, TOTAL.VALUE)
+
+```
+
+# Results
+1. Across the United States, which types of events (as indicated in the 𝙴𝚅𝚃𝚈𝙿𝙴 variable) are most harmful with respect to population health?
+
+- Fatalities data
+```{r echo = FALSE, include = FALSE}
+if ( !is.element('lattice', installed.packages()[,1])  ) install.packages("lattice")
+suppressMessages( require("lattice") )
+```
+
+```{r fatalities}
+
+fatalities <- tapply(storm.data$FATALITIES, storm.data$EVTYPE, sum, na.rm = T)
+
+# get 10 largest values
+fatalities <- sort(fatalities, decreasing = T)[1:10]
+
+#bar plot, sort to get largest values on top 
+barchart(~sort(fatalities),
+         col = "lightgreen",
+         main = "Storm Analysis in USA",
+         xlab = "Fatalities")
+```
+
+- Injuries data
+```{r injuries}
+
+injuries <- tapply(storm.data$INJURIES, storm.data$EVTYPE, sum, na.rm = T)
+
+# get 10 largest values
+injuries <- sort(injuries, decreasing = T)[1:10]
+
+#bar plot, largest values on top 
+barchart(~sort(injuries),
+         col = "lightgreen",
+         main = "Storm Analysis in USA",
+         xlab = "Injuries")
+```
+```{r}
+
+# aggregate fatalities data per state and per event type
+fatalities.state <- aggregate(FATALITIES~EVTYPE + STATE, storm.data, FUN= function(x) sum(x))
+
+# top 10 fatalities
+fatalities.state[order(fatalities.state$FATALITIES, decreasing = T)[1:10], ]
+
+```
+```{r}
+
+# aggregate injury data per state and per event type
+injuries.state <- aggregate(INJURIES~EVTYPE + STATE, storm.data, FUN= function(x) sum(x))
+
+# top 10 fatalities
+injuries.state[order(injuries.state$INJURIES, decreasing = T)[1:10], ]
+
+```
+
+
+2. Across the United States, which types of events have the greatest economic consequences?
+- Bar plot of top 10 events
+```{r}
+
+## property damage
+tot.damage <- tapply(storm.data$TOTAL.VALUE, storm.data$EVTYPE, sum, na.rm = T)
+
+# get 10 largest values
+tot.damage <- sort(tot.damage, decreasing = T)[1:10]
+
+tot.damage <- tot.damage /1000000000
+
+#bar plot, largerst values on top 
+barchart(~sort(tot.damage),
+         col = "lightgreen",
+         main = "Storm Analysis in USA",
+         xlab = "Total Damage [ per 1 billion $]")
+```
+
+- table of top 10 events per state
+```{r}
+
+# aggregate injury data per state and per event type
+tot.damage.state <- aggregate(TOTAL.VALUE~EVTYPE + STATE, storm.data, FUN= function(x) sum(x))
+
+# convert damage to per billion dollars.
+tot.damage.state$TOTAL.VALUE <- round(tot.damage.state$TOTAL.VALUE / 1000000000)
+
+# top 10 fatalities
+tot.damage.state[order(tot.damage.state$TOTAL.VALUE, decreasing = T)[1:10], ]
+
+
+```
+
