@@ -1,0 +1,84 @@
+---
+title: "Coursera, Statistical Inference, Part 2"
+author: "Heather Dye"
+date: "3/16/2018"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Overview: Basic Inferential Data Analysis
+Analyze the ToothGrowth data in the R datasets package.
+
+1. Load the ToothGrowth data and perform some basic exploratory data analyses
+2. Provide a basic summary of the data.
+3. Use confidence intervals and/or hypothesis tests to compare tooth growth by supp and dose. (Only use the techniques from class, even if there's other approaches worth considering)
+4. State your conclusions and the assumptions needed for your conclusions.
+
+## Load Data
+```{r message = FALSE}
+library(ggplot2)
+library(datasets)
+data(ToothGrowth)
+```
+
+## Basic Summary
+```{r}
+str(ToothGrowth)
+summary(ToothGrowth)
+```
+Ten observations per each set of variables are avialble.  The variables are dose of 0.5, 1 and 2 and supplement: OJ and VC.
+
+```{r}
+table(ToothGrowth$supp, ToothGrowth$dose)
+```
+Boxplots
+```{r}
+ggplot(ToothGrowth, aes(x=supp,y=len,fill=supp)) +
+  geom_boxplot() +
+  ggtitle("Tooth Length per Supplement")
+```
+```{r}
+ggplot(ToothGrowth, aes(x=as.factor(dose),y=len,fill = as.factor(dose))) +
+  geom_boxplot() +
+  facet_wrap( ~ supp) +
+  ggtitle("Tooth Length per Dose and per Supplement") +
+  labs(x = "Dose", fill = "Dose") 
+```
+
+## Compare tooth growth by supp and dose using hypothesis tests and / or intervals
+
+Comparison is done by performin t test on each set per dosage.
+```{r}
+dose_0.5 <- ToothGrowth[ToothGrowth$dose == 0.5, ]
+dose_1.0 <- ToothGrowth[ToothGrowth$dose == 1.0, ]
+dose_2.0 <- ToothGrowth[ToothGrowth$dose == 2.0, ]
+```
+
+T test for 0.5 dosage
+```{r}
+test0.5 <- t.test(len ~ supp, paired = FALSE, var.equal = FALSE, data = dose_0.5)
+sprintf("p-value for dose = 0.5: %g", test0.5$p.value)
+sprintf("Confidence Interval for Dose = 0.5: %g", test0.5$conf)
+```
+T test for 1.0 dosage
+```{r}
+test1.0 <- t.test(len ~ supp, paired = FALSE, var.equal = FALSE, data = dose_1.0)
+sprintf("p-value for dose = 1.0: %g", test1.0$p.value)
+sprintf("Confidence Interval for Dose = 1.0: %g", test1.0$conf)
+```
+
+T test for 2.0 dosage
+```{r}
+test2.0 <- t.test(len ~ supp, paired = FALSE, var.equal = FALSE, data = dose_2.0)
+sprintf("p-value for dose = 2.0: %g", test2.0$p.value)
+sprintf("Confidence Interval for Dose = 2.0: %g", test2.0$conf)
+```
+## Conclusions
+
+P-values are lower than 0.05 for dose 0.5 and 1.0. Therefore we can reject the null hypothesis and accept the alternative hypothesis that OJ is correlated with the increased rate of tooth growth of guinea pigs.
+
+P-value is above 0.05 for 2.0 dosage therefore we accept the null hypothesis, meaning there is no statistical difference between controlled and test group and the use of supplement cannot be correlated with different rates of tooth growth of guinea pigs.
